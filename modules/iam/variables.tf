@@ -13,3 +13,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "s3_bucket_arn" {
+  description = "ARN of S3 bucket to grant access to (optional)"
+  type        = string
+  default     = ""
+}

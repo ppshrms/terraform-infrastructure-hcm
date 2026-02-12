@@ -181,7 +181,7 @@ variable "rds_instance_class" {
 
 variable "rds_engine_version" {
   description = "Oracle engine version"
- type        = string
+  type        = string
   default     = "19.0.0.0.ru-2023-10.rur-2023-10.r1"
 }
 

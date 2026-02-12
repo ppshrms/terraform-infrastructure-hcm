@@ -181,7 +181,7 @@ variable "rds_instance_class" {
 
 variable "rds_engine_version" {
   description = "Oracle engine version"
- type        = string
+  type        = string
   default     = "19.0.0.0.ru-2023-10.rur-2023-10.r1"
 }
 
@@ -251,6 +251,24 @@ variable "rds_deletion_protection" {
 
 variable "rds_skip_final_snapshot" {
   description = "Skip final snapshot on deletion"
+  type        = bool
+  default     = false
+}
+
+# ============================================================================
+# SES Configuration (Optional)
+# ============================================================================
+variable "ses_email_identity" {
+  description = "Email address or domain for SES SMTP (e.g., 'noreply@example.com' or 'example.com'). Leave empty to skip SES module."
+  type        = string
+  default     = ""
+}
+
+# ============================================================================
+# Custom RDS Endpoint (Optional)
+# ============================================================================
+variable "create_custom_db_endpoint" {
+  description = "Create custom DNS name for RDS endpoint (e.g., db.example.com instead of long RDS endpoint)"
   type        = bool
   default     = false
 }

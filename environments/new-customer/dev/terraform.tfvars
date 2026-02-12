@@ -77,3 +77,13 @@ cpu_scale_out_threshold    = 70  # CPU % to scale out
 memory_scale_out_threshold = 80  # Memory % to scale out
 scale_evaluation_periods   = 2   # 2 periods of 5 min = 10 min
 scale_cooldown             = 300 # 5 minutes between scaling
+
+# ============================================================================
+# SES SMTP (Optional - for sending emails)
+# ============================================================================
+ses_email_identity = "" # e.g., "noreply@demo-hcm11-1.peopleplushcm.com" or "demo-hcm11-1.peopleplushcm.com"
+
+# ============================================================================
+# Custom Database Endpoint (Optional)
+# ============================================================================
+create_custom_db_endpoint = false # Set true to create db.demo-hcm11-1.peopleplushcm.com

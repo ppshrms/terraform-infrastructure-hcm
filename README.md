@@ -31,6 +31,9 @@ Internet
 - **Monitoring**: CloudWatch metrics, enhanced RDS monitoring
 - **SSM Access**: Secure shell access via AWS Systems Manager
 - **Database**: Oracle SE2 with automated backups and performance insights
+- **Email Sending**: SES SMTP module for application emails (optional)
+- **S3 Storage**: Encrypted S3 bucket for database backups/data (optional)
+- **Custom DNS**: Friendly database endpoint names via Route53 (optional)
 
 ## 📁 Project Structure
 
@@ -43,8 +46,10 @@ terraform-ec2-platform/
 │   ├── iam/                 # IAM roles (EC2, RDS monitoring)
 │   ├── networking/          # VPC, subnets, NAT gateway
 │   ├── rds/                 # RDS Oracle database
+│   ├── s3/                  # S3 bucket for database storage
 │   ├── scaling/             # Auto scaling policies
-│   └── security-groups/     # Security groups for all resources
+│   ├── security-groups/     # Security groups for all resources
+│   └── ses/                 # SES SMTP for email sending
 └── environments/
     └── [customer-name]/
         ├── dev/
@@ -337,6 +342,126 @@ aws rds modify-db-instance \
   --db-instance-identifier [db-id] \
   --master-user-password "NewPassword123!"
 ```
+
+## 🔌 Optional Modules
+
+### SES SMTP Module (Email Sending)
+
+Enable email sending capability for your application using AWS SES.
+
+**Enable in terraform.tfvars:**
+```hcl
+ses_email_identity = "noreply@yourcompany.com"
+# or use domain
+ses_email_identity = "yourcompany.com"
+```
+
+**Add to main.tf:**
+```hcl
+module "ses" {
+  source         = "../../../modules/ses"
+  customer_name  = var.customer_name
+  environment    = var.environment
+  email_identity = var.ses_email_identity
+  aws_region     = var.aws_region
+  tags           = local.common_tags
+}
+```
+
+**Get SMTP credentials:**
+```bash
+terraform output smtp_username
+terraform output smtp_password  # sensitive
+terraform output smtp_endpoint
+```
+
+**Use cases:**
+- Password reset emails
+- User notifications
+- Registration confirmations
+- Automated reports
+
+**Important:** SES starts in sandbox mode. Request production access via AWS Console to send to any email.
+
+---
+
+### S3 Database Storage Module
+
+Create encrypted S3 bucket for database backups, exports, and data storage.
+
+**Add to main.tf:**
+```hcl
+module "s3_database" {
+  source = "../../../modules/s3"
+  
+  bucket_name             = "${var.customer_name}-${var.environment}-db-storage"
+  enable_versioning       = true
+  lifecycle_days          = 90
+  backup_retention_days   = 30
+  vpc_id                  = module.networking.vpc_id
+  route_table_ids         = module.networking.private_route_table_ids
+  create_vpc_endpoint     = true  # For private S3 access
+  allowed_role_arns       = [module.iam.instance_role_arn]
+  aws_region              = var.aws_region
+  tags                    = local.common_tags
+}
+
+# Update IAM module to grant access
+module "iam" {
+  source        = "../../../modules/iam"
+  customer_name = var.customer_name
+  environment   = var.environment
+  s3_bucket_arn = module.s3_database.bucket_arn  # Add this line
+  tags          = local.common_tags
+}
+```
+
+**Features:**
+- ✅ AES256 encryption
+- ✅ Versioning (90-day retention)
+- ✅ Lifecycle policies
+- ✅ Private access via VPC endpoint (no NAT charges)
+- ✅ Automatic EC2 permissions
+
+**Use from EC2:**
+```bash
+aws s3 ls s3://[customer]-[env]-db-storage/
+aws s3 cp backup.sql s3://[customer]-[env]-db-storage/backups/
+```
+
+---
+
+### Custom RDS Endpoint (Friendly DNS)
+
+Create a short, memorable DNS name for your database instead of long RDS endpoint.
+
+**Enable in terraform.tfvars:**
+```hcl
+create_custom_db_endpoint = true
+```
+
+**Add to main.tf (after RDS module):**
+```hcl
+resource "aws_route53_record" "db_custom_endpoint" {
+  count   = var.create_custom_db_endpoint ? 1 : 0
+  zone_id = local.hosted_zone_id
+  name    = "db.${var.domain_name}"
+  type    = "CNAME"
+  ttl     = 300
+  records = [module.rds.endpoint]
+}
+```
+
+**Result:**
+- Instead of: `demo-oracle.abc123.ap-southeast-1.rds.amazonaws.com:1521`
+- Use: `db.yourcompany.com:1521`
+
+**Benefits:**
+- Easier to remember
+- Can change RDS instance without code changes
+- Consistent across environments
+
+---
 
 ## ⚠️ Important Notes
 

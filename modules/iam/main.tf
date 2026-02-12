@@ -36,6 +36,32 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_policy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
 }
 
+# S3 Access Policy - for database storage bucket
+resource "aws_iam_role_policy" "s3_database_access" {
+  count = var.s3_bucket_arn != "" ? 1 : 0
+  name  = "s3-database-access"
+  role  = aws_iam_role.ec2_instance_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          var.s3_bucket_arn,
+          "${var.s3_bucket_arn}/*"
+        ]
+      }
+    ]
+  })
+}
+
 
 # Instance Profile
 resource "aws_iam_instance_profile" "ec2_profile" {
