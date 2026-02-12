@@ -343,6 +343,35 @@ aws rds modify-db-instance \
   --master-user-password "NewPassword123!"
 ```
 
+### SSH to Backend Instances (ASG)
+
+**Get instance ID from Auto Scaling Group:**
+```bash
+# List all instances
+aws autoscaling describe-auto-scaling-groups \
+  --auto-scaling-group-names [customer]-[env]-backend-asg \
+  --query 'AutoScalingGroups[0].Instances[*].[InstanceId,HealthStatus]' \
+  --output table
+```
+
+**SSH into instance:**
+```bash
+# Option 1: SSM Session Manager (recommended - no public IP needed)
+aws ssm start-session --target i-xxxxx
+
+# Option 2: SSH with key (if public IP available)
+ssh -i ssh-keys/backend-key.pem ec2-user@[public-ip]
+```
+
+**Quick one-liner:**
+```bash
+# SSH to first healthy instance
+INSTANCE=$(aws autoscaling describe-auto-scaling-groups \
+  --auto-scaling-group-names [customer]-[env]-backend-asg \
+  --query 'AutoScalingGroups[0].Instances[0].InstanceId' \
+  --output text) && aws ssm start-session --target $INSTANCE
+```
+
 ## 🔌 Optional Modules
 
 ### SES SMTP Module (Email Sending)
