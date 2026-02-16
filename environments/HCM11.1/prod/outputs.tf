@@ -86,6 +86,21 @@ output "frontend_instance_id" {
   value       = module.frontend.instance_id
 }
 
+output "frontend_public_ip" {
+  description = "Frontend EC2 Public IP (Elastic IP)"
+  value       = module.frontend.public_ip
+}
+
+output "backend_base_instance_id" {
+  description = "Backend Base Instance ID"
+  value       = module.backend.base_instance_id
+}
+
+output "backend_base_public_ip" {
+  description = "Backend Base Instance Public IP (Elastic IP)"
+  value       = module.backend.base_instance_public_ip
+}
+
 output "backend_asg_name" {
   description = "Backend Auto Scaling Group name"
   value       = module.backend.asg_name
@@ -129,7 +144,7 @@ output "next_steps" {
        - Run: 'terraform apply'
     
     🔐 SSH Access (Use 'EC2-Sandbox-TH' key):
-    - Frontend: ssh -i path/to/EC2-Sandbox-TH.pem ec2-user@<FRONTEND_PUBLIC_IP>
-    - Backend:  Jump via Frontend
+    - Frontend: ssh -i path/to/EC2-Sandbox-TH.pem ec2-user@${module.frontend.public_ip}
+    - Backend Base: ssh -i path/to/EC2-Sandbox-TH.pem ec2-user@${module.backend.base_instance_public_ip}
   EOT
 }

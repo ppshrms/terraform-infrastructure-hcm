@@ -17,3 +17,8 @@ output "private_dns" {
   description = "Private DNS name of Frontend EC2"
   value       = aws_instance.frontend.private_dns
 }
+
+output "public_ip" {
+  description = "Public IP address of Frontend EC2 (Elastic IP)"
+  value       = aws_eip.frontend.public_ip
+}

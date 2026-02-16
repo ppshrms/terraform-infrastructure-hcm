@@ -41,7 +41,8 @@ resource "aws_db_instance" "main" {
   # Storage
   allocated_storage     = var.allocated_storage
   max_allocated_storage = var.max_allocated_storage
-  storage_type          = "gp3"
+  storage_type          = "gp2"
+  iops                  = 0 # Explicitly clear IOPS for gp2 compatibility
   storage_encrypted     = true
 
   # Database

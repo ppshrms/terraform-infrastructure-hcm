@@ -53,7 +53,7 @@ resource "aws_lb_target_group" "frontend" {
 
 # Frontend ALB Listener - HTTPS (only created if certificate is provided)
 resource "aws_lb_listener" "frontend_https" {
-  count = var.certificate_arn != null ? 1 : 0
+  count = var.enable_https ? 1 : 0
 
   load_balancer_arn = aws_lb.frontend.arn
   port              = "443"
@@ -150,7 +150,7 @@ resource "aws_lb_target_group" "backend" {
 
 # Backend ALB Listener - HTTPS (only created if certificate is provided)
 resource "aws_lb_listener" "backend_https" {
-  count = var.certificate_arn != null ? 1 : 0
+  count = var.enable_https ? 1 : 0
 
   load_balancer_arn = aws_lb.backend.arn
   port              = "443"

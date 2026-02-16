@@ -10,6 +10,11 @@ output "base_instance_private_ip" {
   value       = var.create_backend_base ? aws_instance.backend_base[0].private_ip : null
 }
 
+output "base_instance_public_ip" {
+  description = "Public IP of the base backend instance (Elastic IP)"
+  value       = var.create_backend_base ? aws_eip.backend_base[0].public_ip : null
+}
+
 # ASG Outputs
 output "asg_id" {
   description = "ID of the Auto Scaling Group"

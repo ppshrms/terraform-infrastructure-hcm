@@ -59,3 +59,16 @@ resource "aws_lb_target_group_attachment" "frontend" {
   target_id        = aws_instance.frontend.id
   port             = 80
 }
+
+# Elastic IP for Frontend Instance
+resource "aws_eip" "frontend" {
+  domain   = "vpc"
+  instance = aws_instance.frontend.id
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.customer_name}-${var.environment}-frontend-eip"
+    }
+  )
+}

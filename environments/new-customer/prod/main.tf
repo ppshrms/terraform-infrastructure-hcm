@@ -38,28 +38,6 @@ provider "aws" {
 # Get current AWS account information
 data "aws_caller_identity" "current" {}
 
-# Validate AWS Account ID to prevent deploying to wrong account
-resource "null_resource" "validate_account" {
-  count = var.expected_account_id != "" ? 1 : 0
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      if [ "${data.aws_caller_identity.current.account_id}" != "${var.expected_account_id}" ]; then
-        echo "❌ ERROR: Deploying to wrong AWS account!"
-        echo "Expected Account ID: ${var.expected_account_id}"
-        echo "Current Account ID:  ${data.aws_caller_identity.current.account_id}"
-        echo "Current User ARN:    ${data.aws_caller_identity.current.arn}"
-        exit 1
-      fi
-      echo "✅ Correct AWS Account: ${data.aws_caller_identity.current.account_id}"
-    EOT
-  }
-
-  triggers = {
-    account_check = data.aws_caller_identity.current.account_id
-  }
-}
-
 locals {
   common_tags = {
     Customer    = var.customer_name
@@ -68,53 +46,11 @@ locals {
 }
 
 # ============================================================================
-# SSH Key Pairs for EC2 instances
+# SSH Key Pairs (Use Existing EC2-Sandbox-TH)
 # ============================================================================
-resource "tls_private_key" "frontend" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-resource "aws_key_pair" "frontend" {
-  key_name   = "${var.customer_name}-${var.environment}-frontend-key"
-  public_key = tls_private_key.frontend.public_key_openssh
-
-  tags = merge(
-    local.common_tags,
-    {
-      Name = "${var.customer_name}-${var.environment}-frontend-key"
-    }
-  )
-}
-
-resource "tls_private_key" "backend" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-resource "aws_key_pair" "backend" {
-  key_name   = "${var.customer_name}-${var.environment}-backend-key"
-  public_key = tls_private_key.backend.public_key_openssh
-
-  tags = merge(
-    local.common_tags,
-    {
-      Name = "${var.customer_name}-${var.environment}-backend-key"
-    }
-  )
-}
-
-# Save private keys locally (for SSH access)
-resource "local_file" "frontend_private_key" {
-  content         = tls_private_key.frontend.private_key_pem
-  filename        = "${path.module}/ssh-keys/${var.customer_name}-frontend-key.pem"
-  file_permission = "0400"
-}
-
-resource "local_file" "backend_private_key" {
-  content         = tls_private_key.backend.private_key_pem
-  filename        = "${path.module}/ssh-keys/${var.customer_name}-backend-key.pem"
-  file_permission = "0400"
+data "aws_key_pair" "existing" {
+  key_name           = "EC2-Sandbox-TH"
+  include_public_key = true
 }
 
 # ============================================================================
@@ -153,34 +89,32 @@ module "security_groups" {
   tags          = local.common_tags
 }
 
-
-
 # ============================================================================
-# Route53 Hosted Zone (created first, no dependencies)
+# ACM Certificate (Instead of Route53 Hosted Zone)
 # ============================================================================
-resource "aws_route53_zone" "main" {
-  count = var.create_hosted_zone ? 1 : 0
-  name  = var.domain_name
+resource "aws_acm_certificate" "main" {
+  domain_name       = var.domain_name
+  validation_method = "DNS"
+
+  subject_alternative_names = [
+    "*.${var.domain_name}",
+    var.domain_name
+  ]
 
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.customer_name}-${var.environment}-hosted-zone"
+      Name = "${var.customer_name}-${var.environment}-acm-cert"
     }
   )
-}
 
-data "aws_route53_zone" "existing" {
-  count = var.create_hosted_zone ? 0 : 1
-  name  = var.domain_name
-}
-
-locals {
-  hosted_zone_id = var.create_hosted_zone ? aws_route53_zone.main[0].zone_id : data.aws_route53_zone.existing[0].zone_id
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # ============================================================================
-# ALB Module - HTTP ONLY (no HTTPS listener in Phase 1)
+# ALB Module
 # ============================================================================
 module "alb" {
   source = "../../modules/alb"
@@ -190,7 +124,8 @@ module "alb" {
   vpc_id                     = module.networking.vpc_id
   public_subnet_ids          = module.networking.public_subnet_ids
   alb_security_group_id      = module.security_groups.alb_sg_id
-  certificate_arn            = null # No certificate in Phase 1
+  certificate_arn            = aws_acm_certificate.main.arn
+  enable_https               = false # Enable after ACM validation
   enable_deletion_protection = var.alb_deletion_protection
   tags                       = local.common_tags
 }
@@ -205,8 +140,8 @@ module "frontend" {
   environment          = var.environment
   instance_type        = var.frontend_instance_type
   ami_id               = var.frontend_ami
-  key_name             = aws_key_pair.frontend.key_name
-  subnet_ids           = module.networking.private_app_subnet_ids
+  key_name             = data.aws_key_pair.existing.key_name
+  subnet_ids           = module.networking.public_subnet_ids # Public Subnet for Public Access
   security_group_id    = module.security_groups.frontend_sg_id
   iam_instance_profile = module.iam.instance_profile_name
   target_group_arn     = module.alb.frontend_target_group_arn
@@ -226,7 +161,7 @@ module "backend" {
   environment          = var.environment
   instance_type        = var.backend_instance_type
   ami_id               = var.backend_ami
-  key_name             = aws_key_pair.backend.key_name
+  key_name             = data.aws_key_pair.existing.key_name
   subnet_ids           = module.networking.private_app_subnet_ids
   security_group_id    = module.security_groups.backend_sg_id
   iam_instance_profile = module.iam.instance_profile_name
@@ -246,7 +181,7 @@ module "rds" {
 
   customer_name     = var.customer_name
   environment       = var.environment
-  subnet_ids        = module.networking.private_app_subnet_ids
+  subnet_ids        = module.networking.public_subnet_ids # Public Subnet for Public Access
   security_group_id = module.security_groups.rds_sg_id
 
   instance_class        = var.rds_instance_class
@@ -268,22 +203,4 @@ module "rds" {
   skip_final_snapshot     = var.rds_skip_final_snapshot
 
   tags = local.common_tags
-}
-
-# ============================================================================
-# Scaling Policies
-# ============================================================================
-module "scaling" {
-  source = "../../modules/scaling"
-
-  customer_name              = var.customer_name
-  environment                = var.environment
-  asg_name                   = module.backend.asg_name
-  cpu_scale_out_threshold    = var.cpu_scale_out_threshold
-  memory_scale_out_threshold = var.memory_scale_out_threshold
-  scale_evaluation_periods   = var.scale_evaluation_periods
-  scale_cooldown             = var.scale_cooldown
-  tags                       = local.common_tags
-
-  depends_on = [module.backend]
 }

@@ -23,8 +23,14 @@ variable "alb_security_group_id" {
   type        = string
 }
 
+variable "enable_https" {
+  description = "Enable HTTPS listeners (set to true when certificate_arn is provided)"
+  type        = bool
+  default     = false
+}
+
 variable "certificate_arn" {
-  description = "ARN of ACM certificate for HTTPS (null to skip HTTPS listener in Phase 1)"
+  description = "ARN of ACM certificate for HTTPS"
   type        = string
   default     = null
 }

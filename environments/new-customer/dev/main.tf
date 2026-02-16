@@ -68,60 +68,18 @@ locals {
 }
 
 # ============================================================================
-# SSH Key Pairs for EC2 instances
+# SSH Key Pairs (Use Existing EC2-Sandbox-TH)
 # ============================================================================
-resource "tls_private_key" "frontend" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-resource "aws_key_pair" "frontend" {
-  key_name   = "${var.customer_name}-${var.environment}-frontend-key"
-  public_key = tls_private_key.frontend.public_key_openssh
-
-  tags = merge(
-    local.common_tags,
-    {
-      Name = "${var.customer_name}-${var.environment}-frontend-key"
-    }
-  )
-}
-
-resource "tls_private_key" "backend" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-resource "aws_key_pair" "backend" {
-  key_name   = "${var.customer_name}-${var.environment}-backend-key"
-  public_key = tls_private_key.backend.public_key_openssh
-
-  tags = merge(
-    local.common_tags,
-    {
-      Name = "${var.customer_name}-${var.environment}-backend-key"
-    }
-  )
-}
-
-# Save private keys locally (for SSH access)
-resource "local_file" "frontend_private_key" {
-  content         = tls_private_key.frontend.private_key_pem
-  filename        = "${path.module}/ssh-keys/${var.customer_name}-frontend-key.pem"
-  file_permission = "0400"
-}
-
-resource "local_file" "backend_private_key" {
-  content         = tls_private_key.backend.private_key_pem
-  filename        = "${path.module}/ssh-keys/${var.customer_name}-backend-key.pem"
-  file_permission = "0400"
+data "aws_key_pair" "existing" {
+  key_name           = "EC2-Sandbox-TH"
+  include_public_key = true
 }
 
 # ============================================================================
 # IAM Module
 # ============================================================================
 module "iam" {
-  source = "../../../modules/iam"
+  source = "../../modules/iam"
 
   customer_name = var.customer_name
   environment   = var.environment
@@ -132,7 +90,7 @@ module "iam" {
 # Networking Module
 # ============================================================================
 module "networking" {
-  source = "../../../modules/networking"
+  source = "../../modules/networking"
 
   customer_name      = var.customer_name
   environment        = var.environment
@@ -145,7 +103,7 @@ module "networking" {
 # Security Groups Module
 # ============================================================================
 module "security_groups" {
-  source = "../../../modules/security-groups"
+  source = "../../modules/security-groups"
 
   customer_name = var.customer_name
   environment   = var.environment
@@ -153,44 +111,43 @@ module "security_groups" {
   tags          = local.common_tags
 }
 
-
-
 # ============================================================================
-# Route53 Hosted Zone (created first, no dependencies)
+# ACM Certificate (Instead of Route53 Hosted Zone)
 # ============================================================================
-resource "aws_route53_zone" "main" {
-  count = var.create_hosted_zone ? 1 : 0
-  name  = var.domain_name
+resource "aws_acm_certificate" "main" {
+  domain_name       = var.domain_name
+  validation_method = "DNS"
+
+  subject_alternative_names = [
+    "*.${var.domain_name}",
+    var.domain_name
+  ]
 
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.customer_name}-${var.environment}-hosted-zone"
+      Name = "${var.customer_name}-${var.environment}-acm-cert"
     }
   )
-}
 
-data "aws_route53_zone" "existing" {
-  count = var.create_hosted_zone ? 0 : 1
-  name  = var.domain_name
-}
-
-locals {
-  hosted_zone_id = var.create_hosted_zone ? aws_route53_zone.main[0].zone_id : data.aws_route53_zone.existing[0].zone_id
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # ============================================================================
-# ALB Module - HTTP ONLY (no HTTPS listener in Phase 1)
+# ALB Module
 # ============================================================================
 module "alb" {
-  source = "../../../modules/alb"
+  source = "../../modules/alb"
 
   customer_name              = var.customer_name
   environment                = var.environment
   vpc_id                     = module.networking.vpc_id
   public_subnet_ids          = module.networking.public_subnet_ids
   alb_security_group_id      = module.security_groups.alb_sg_id
-  certificate_arn            = null # No certificate in Phase 1
+  certificate_arn            = aws_acm_certificate.main.arn
+  enable_https               = false # Enable after ACM validation
   enable_deletion_protection = var.alb_deletion_protection
   tags                       = local.common_tags
 }
@@ -199,14 +156,20 @@ module "alb" {
 # Frontend Module
 # ============================================================================
 module "frontend" {
-  source = "../../../modules/frontend"
+  source = "../../modules/frontend"
 
-  customer_name        = var.customer_name
-  environment          = var.environment
-  instance_type        = var.frontend_instance_type
-  ami_id               = var.frontend_ami
-  key_name             = aws_key_pair.frontend.key_name
-  subnet_ids           = module.networking.private_app_subnet_ids
+  customer_name = var.customer_name
+  environment   = var.environment
+  instance_type = var.frontend_instance_type
+  ami_id        = var.frontend_ami
+  key_name      = data.aws_key_pair.existing.key_name
+  subnet_ids    = module.networking.public_subnet_ids # Frontend in Public Subnet?? In HCM11 it was public? 
+  # Wait, HCM11 frontend was in public subnet? No!
+  # Let me check HCM11 main.tf again...
+  # Step 196: HCM11 frontend subnet_ids = module.networking.public_subnet_ids
+  # YES! Frontend is in Public Subnet in HCM11.
+  # So I should change this too.
+
   security_group_id    = module.security_groups.frontend_sg_id
   iam_instance_profile = module.iam.instance_profile_name
   target_group_arn     = module.alb.frontend_target_group_arn
@@ -218,7 +181,7 @@ module "frontend" {
 # Backend Module
 # ============================================================================
 module "backend" {
-  source = "../../../modules/backend"
+  source = "../../modules/backend"
 
   create_backend_base = var.create_backend_base
 
@@ -226,8 +189,8 @@ module "backend" {
   environment          = var.environment
   instance_type        = var.backend_instance_type
   ami_id               = var.backend_ami
-  key_name             = aws_key_pair.backend.key_name
-  subnet_ids           = module.networking.private_app_subnet_ids
+  key_name             = data.aws_key_pair.existing.key_name
+  subnet_ids           = module.networking.private_app_subnet_ids # Backend stays private
   security_group_id    = module.security_groups.backend_sg_id
   iam_instance_profile = module.iam.instance_profile_name
   target_group_arn     = module.alb.backend_target_group_arn
@@ -242,17 +205,21 @@ module "backend" {
 # RDS Oracle Database
 # ============================================================================
 module "rds" {
-  source = "../../../modules/rds"
+  source = "../../modules/rds"
 
   customer_name     = var.customer_name
   environment       = var.environment
-  subnet_ids        = module.networking.private_app_subnet_ids
+  subnet_ids        = module.networking.public_subnet_ids # CHANGED TO PUBLIC for Public Access
   security_group_id = module.security_groups.rds_sg_id
 
   instance_class        = var.rds_instance_class
   engine_version        = var.rds_engine_version
   allocated_storage     = var.rds_allocated_storage
   max_allocated_storage = var.rds_max_allocated_storage
+
+  # Note: IOPS/Gp2 handled in module or tfvars? tfvars usually.
+  # Module RDS main.tf now parses iops based on storage_type=gp2. 
+  # So we just pass variables here.
 
   database_name   = var.rds_database_name
   master_username = var.rds_master_username

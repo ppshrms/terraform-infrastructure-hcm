@@ -53,7 +53,7 @@ resource "aws_instance" "backend_base" {
   )
 
   lifecycle {
-    ignore_changes = [ami, user_data]
+    ignore_changes = [ami]
   }
 }
 
@@ -64,6 +64,21 @@ resource "aws_lb_target_group_attachment" "backend_base" {
   target_group_arn = var.target_group_arn
   target_id        = aws_instance.backend_base[0].id
   port             = 80
+}
+
+# Elastic IP for Backend Base Instance
+resource "aws_eip" "backend_base" {
+  count = var.create_backend_base ? 1 : 0
+
+  domain   = "vpc"
+  instance = aws_instance.backend_base[0].id
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.customer_name}-${var.environment}-backend-base-eip"
+    }
+  )
 }
 
 # Launch Template for ASG
