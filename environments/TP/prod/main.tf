@@ -68,54 +68,9 @@ locals {
 }
 
 # ============================================================================
-# SSH Key Pairs for EC2 instances
+# SSH Key Pair - Using existing key pair
 # ============================================================================
-resource "tls_private_key" "frontend" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-resource "aws_key_pair" "frontend" {
-  key_name   = "${var.customer_name}-${var.environment}-frontend-key"
-  public_key = tls_private_key.frontend.public_key_openssh
-
-  tags = merge(
-    local.common_tags,
-    {
-      Name = "${var.customer_name}-${var.environment}-frontend-key"
-    }
-  )
-}
-
-resource "tls_private_key" "backend" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-resource "aws_key_pair" "backend" {
-  key_name   = "${var.customer_name}-${var.environment}-backend-key"
-  public_key = tls_private_key.backend.public_key_openssh
-
-  tags = merge(
-    local.common_tags,
-    {
-      Name = "${var.customer_name}-${var.environment}-backend-key"
-    }
-  )
-}
-
-# Save private keys locally (for SSH access)
-resource "local_file" "frontend_private_key" {
-  content         = tls_private_key.frontend.private_key_pem
-  filename        = "${path.module}/ssh-keys/${var.customer_name}-frontend-key.pem"
-  file_permission = "0400"
-}
-
-resource "local_file" "backend_private_key" {
-  content         = tls_private_key.backend.private_key_pem
-  filename        = "${path.module}/ssh-keys/${var.customer_name}-backend-key.pem"
-  file_permission = "0400"
-}
+# No auto-generated keys - using existing key pair specified in terraform.tfvars
 
 # ============================================================================
 # IAM Module
@@ -153,34 +108,28 @@ module "security_groups" {
   tags          = local.common_tags
 }
 
-
-
 # ============================================================================
-# Route53 Hosted Zone (created first, no dependencies)
+# ACM Certificate
 # ============================================================================
-resource "aws_route53_zone" "main" {
-  count = var.create_hosted_zone ? 1 : 0
-  name  = var.domain_name
+resource "aws_acm_certificate" "main" {
+  domain_name               = var.domain_name
+  subject_alternative_names = ["*.${var.domain_name}"]
+  validation_method         = "DNS"
 
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.customer_name}-${var.environment}-hosted-zone"
+      Name = "${var.customer_name}-${var.environment}-acm-cert"
     }
   )
-}
 
-data "aws_route53_zone" "existing" {
-  count = var.create_hosted_zone ? 0 : 1
-  name  = var.domain_name
-}
-
-locals {
-  hosted_zone_id = var.create_hosted_zone ? aws_route53_zone.main[0].zone_id : data.aws_route53_zone.existing[0].zone_id
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # ============================================================================
-# ALB Module - HTTP ONLY (no HTTPS listener in Phase 1)
+# ALB Module
 # ============================================================================
 module "alb" {
   source = "../../modules/alb"
@@ -190,7 +139,8 @@ module "alb" {
   vpc_id                     = module.networking.vpc_id
   public_subnet_ids          = module.networking.public_subnet_ids
   alb_security_group_id      = module.security_groups.alb_sg_id
-  certificate_arn            = null # No certificate in Phase 1
+  enable_https               = false # Set to true after ACM validation
+  certificate_arn            = aws_acm_certificate.main.arn
   enable_deletion_protection = var.alb_deletion_protection
   tags                       = local.common_tags
 }
@@ -205,8 +155,8 @@ module "frontend" {
   environment          = var.environment
   instance_type        = var.frontend_instance_type
   ami_id               = var.frontend_ami
-  key_name             = aws_key_pair.frontend.key_name
-  subnet_ids           = module.networking.private_app_subnet_ids
+  key_name             = var.frontend_key_name
+  subnet_ids           = module.networking.public_subnet_ids
   security_group_id    = module.security_groups.frontend_sg_id
   iam_instance_profile = module.iam.instance_profile_name
   target_group_arn     = module.alb.frontend_target_group_arn
@@ -226,8 +176,8 @@ module "backend" {
   environment          = var.environment
   instance_type        = var.backend_instance_type
   ami_id               = var.backend_ami
-  key_name             = aws_key_pair.backend.key_name
-  subnet_ids           = module.networking.private_app_subnet_ids
+  key_name             = var.backend_key_name
+  subnet_ids           = module.networking.public_subnet_ids
   security_group_id    = module.security_groups.backend_sg_id
   iam_instance_profile = module.iam.instance_profile_name
   target_group_arn     = module.alb.backend_target_group_arn
@@ -244,9 +194,10 @@ module "backend" {
 module "rds" {
   source = "../../modules/rds"
 
+  create_rds        = var.create_rds
   customer_name     = var.customer_name
   environment       = var.environment
-  subnet_ids        = module.networking.private_app_subnet_ids
+  subnet_ids        = module.networking.public_subnet_ids
   security_group_id = module.security_groups.rds_sg_id
 
   instance_class        = var.rds_instance_class

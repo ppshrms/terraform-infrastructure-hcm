@@ -53,6 +53,12 @@ variable "aws_region" {
   default     = "ap-southeast-1"
 }
 
+variable "upload_wallet_file" {
+  description = "Upload Oracle Wallet file (cwallet.sso) to S3 bucket"
+  type        = bool
+  default     = false
+}
+
 variable "tags" {
   description = "Common tags to apply to all resources"
   type        = map(string)

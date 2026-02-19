@@ -48,6 +48,7 @@ backend_root_volume_size = 100
 # ============================================================================
 # RDS Oracle Database
 # ============================================================================
+create_rds                = true # ← เปลี่ยนเป็น false ถ้าไม่ต้องการ RDS
 rds_instance_class        = "db.m7i.large"
 rds_engine_version        = "19.0.0.0.ru-2023-10.rur-2023-10.r1"
 rds_allocated_storage     = 200
@@ -77,13 +78,3 @@ cpu_scale_out_threshold    = 70  # CPU % to scale out
 memory_scale_out_threshold = 80  # Memory % to scale out
 scale_evaluation_periods   = 2   # 2 periods of 5 min = 10 min
 scale_cooldown             = 300 # 5 minutes between scaling
-
-# ============================================================================
-# SES SMTP (Optional - for sending emails)
-# ============================================================================
-ses_email_identity = "" # PRODUCTION: Set to "noreply@yourcompany.com" or domain
-
-# ============================================================================
-# Custom Database Endpoint (Optional)
-# ============================================================================
-create_custom_db_endpoint = true # Production: Enable custom DB endpoint

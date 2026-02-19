@@ -107,11 +107,11 @@ resource "aws_security_group" "backend" {
   }
 
   ingress {
-    description     = "SSH from Frontend (Bastion)"
-    from_port       = 22
-    to_port         = 22
-    protocol        = "tcp"
-    security_groups = [aws_security_group.frontend.id]
+    description = "SSH from Anywhere"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -151,6 +151,14 @@ resource "aws_security_group" "rds" {
     to_port         = 1521
     protocol        = "tcp"
     security_groups = [aws_security_group.frontend.id]
+  }
+
+  ingress {
+    description = "Oracle from Anywhere (Public Access)"
+    from_port   = 1521
+    to_port     = 1521
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {

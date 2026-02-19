@@ -43,16 +43,15 @@ resource "null_resource" "validate_account" {
   count = var.expected_account_id != "" ? 1 : 0
 
   provisioner "local-exec" {
-    interpreter = ["powershell", "-Command"]
-    command     = <<-EOT
-      if ("${data.aws_caller_identity.current.account_id}" -ne "${var.expected_account_id}") {
-        Write-Error "ERROR: Deploying to wrong AWS account!"
-        Write-Host "Expected Account ID: ${var.expected_account_id}"
-        Write-Host "Current Account ID:  ${data.aws_caller_identity.current.account_id}"
-        Write-Host "Current User ARN:    ${data.aws_caller_identity.current.arn}"
+    command = <<-EOT
+      if [ "${data.aws_caller_identity.current.account_id}" != "${var.expected_account_id}" ]; then
+        echo "❌ ERROR: Deploying to wrong AWS account!"
+        echo "Expected Account ID: ${var.expected_account_id}"
+        echo "Current Account ID:  ${data.aws_caller_identity.current.account_id}"
+        echo "Current User ARN:    ${data.aws_caller_identity.current.arn}"
         exit 1
-      }
-      Write-Host "Correct AWS Account: ${data.aws_caller_identity.current.account_id}"
+      fi
+      echo "✅ Correct AWS Account: ${data.aws_caller_identity.current.account_id}"
     EOT
   }
 
@@ -159,7 +158,7 @@ module "frontend" {
   instance_type        = var.frontend_instance_type
   ami_id               = var.frontend_ami
   key_name             = var.frontend_key_name
-  subnet_ids           = module.networking.private_app_subnet_ids
+  subnet_ids           = module.networking.public_subnet_ids
   security_group_id    = module.security_groups.frontend_sg_id
   iam_instance_profile = module.iam.instance_profile_name
   target_group_arn     = module.alb.frontend_target_group_arn
@@ -180,7 +179,7 @@ module "backend" {
   instance_type        = var.backend_instance_type
   ami_id               = var.backend_ami
   key_name             = var.backend_key_name
-  subnet_ids           = module.networking.private_app_subnet_ids
+  subnet_ids           = module.networking.public_subnet_ids
   security_group_id    = module.security_groups.backend_sg_id
   iam_instance_profile = module.iam.instance_profile_name
   target_group_arn     = module.alb.backend_target_group_arn
@@ -197,6 +196,7 @@ module "backend" {
 module "rds" {
   source = "../../../modules/rds"
 
+  create_rds        = var.create_rds
   customer_name     = var.customer_name
   environment       = var.environment
   subnet_ids        = module.networking.public_subnet_ids

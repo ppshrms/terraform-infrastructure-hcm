@@ -39,18 +39,10 @@ variable "create_nat_gateway" {
   default     = true
 }
 
-
-
 # Domain & DNS
 variable "domain_name" {
   description = "Base domain name"
   type        = string
-}
-
-variable "create_hosted_zone" {
-  description = "Whether to create a new hosted zone"
-  type        = bool
-  default     = true
 }
 
 variable "frontend_domain" {
@@ -161,8 +153,6 @@ variable "scale_cooldown" {
   default     = 300
 }
 
-
-
 # ALB Configuration
 variable "alb_deletion_protection" {
   description = "Enable deletion protection on ALB"
@@ -173,6 +163,12 @@ variable "alb_deletion_protection" {
 # ============================================================================
 # RDS Oracle Configuration
 # ============================================================================
+variable "create_rds" {
+  description = "Whether to create the RDS Oracle database"
+  type        = bool
+  default     = true
+}
+
 variable "rds_instance_class" {
   description = "RDS instance class"
   type        = string
@@ -251,24 +247,6 @@ variable "rds_deletion_protection" {
 
 variable "rds_skip_final_snapshot" {
   description = "Skip final snapshot on deletion"
-  type        = bool
-  default     = false
-}
-
-# ============================================================================
-# SES Configuration (Optional)
-# ============================================================================
-variable "ses_email_identity" {
-  description = "Email address or domain for SES SMTP (e.g., 'noreply@example.com' or 'example.com'). Leave empty to skip SES module."
-  type        = string
-  default     = ""
-}
-
-# ============================================================================
-# Custom RDS Endpoint (Optional)
-# ============================================================================
-variable "create_custom_db_endpoint" {
-  description = "Create custom DNS name for RDS endpoint (e.g., db.example.com instead of long RDS endpoint)"
   type        = bool
   default     = false
 }

@@ -39,18 +39,10 @@ variable "create_nat_gateway" {
   default     = true
 }
 
-
-
 # Domain & DNS
 variable "domain_name" {
   description = "Base domain name"
   type        = string
-}
-
-variable "create_hosted_zone" {
-  description = "Whether to create a new hosted zone"
-  type        = bool
-  default     = true
 }
 
 variable "frontend_domain" {
@@ -161,8 +153,6 @@ variable "scale_cooldown" {
   default     = 300
 }
 
-
-
 # ALB Configuration
 variable "alb_deletion_protection" {
   description = "Enable deletion protection on ALB"
@@ -173,6 +163,12 @@ variable "alb_deletion_protection" {
 # ============================================================================
 # RDS Oracle Configuration
 # ============================================================================
+variable "create_rds" {
+  description = "Whether to create the RDS Oracle database"
+  type        = bool
+  default     = true
+}
+
 variable "rds_instance_class" {
   description = "RDS instance class"
   type        = string

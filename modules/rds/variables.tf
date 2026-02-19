@@ -1,3 +1,9 @@
+variable "create_rds" {
+  description = "Whether to create the RDS Oracle database"
+  type        = bool
+  default     = true
+}
+
 variable "customer_name" {
   description = "Customer name for resource naming"
   type        = string

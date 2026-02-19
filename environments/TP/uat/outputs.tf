@@ -34,6 +34,11 @@ output "acm_certificate_arn" {
   value       = aws_acm_certificate.main.arn
 }
 
+output "acm_certificate_domain" {
+  description = "ACM Certificate domain name"
+  value       = aws_acm_certificate.main.domain_name
+}
+
 output "acm_dns_validation_records" {
   description = "DNS records to add for ACM certificate validation"
   value = {
@@ -46,7 +51,7 @@ output "acm_dns_validation_records" {
 }
 
 # ============================================================================
-# ALB Outputs
+# ALB Outputs (CRITICAL for Phase 2)
 # ============================================================================
 output "frontend_alb_dns_name" {
   description = "Frontend ALB DNS Name"
@@ -101,9 +106,34 @@ output "backend_asg_name" {
   value       = module.backend.asg_name
 }
 
+# ============================================================================
+# SSH Keys Outputs
+# ============================================================================
+output "frontend_key_name" {
+  description = "Frontend SSH key pair name"
+  value       = var.frontend_key_name
+}
+
+output "backend_key_name" {
+  description = "Backend SSH key pair name"
+  value       = var.backend_key_name
+}
 
 # ============================================================================
-# Next Steps
+# RDS Outputs
+# ============================================================================
+output "rds_endpoint" {
+  description = "RDS instance endpoint"
+  value       = module.rds.db_endpoint
+}
+
+output "rds_address" {
+  description = "RDS instance address"
+  value       = module.rds.db_address
+}
+
+# ============================================================================
+# Next Steps for Phase 2
 # ============================================================================
 output "next_steps" {
   description = "Instructions for Phase 2 deployment"
@@ -111,10 +141,10 @@ output "next_steps" {
     ✅ Phase 1 Complete!
     
     📋 DNS Setup:
-    1. **Frontend**: CNAME '${var.domain_name}'
+    1. **Frontend**: CNAME '${var.domain_name}' 
        👉 ${module.alb.frontend_alb_dns}
        
-    2. **Backend**: CNAME 'api.demo-hcm11...'
+    2. **Backend**: CNAME '${var.backend_domain}'
        👉 ${module.alb.backend_alb_dns}
        
     3. **SSL Validation**: 
@@ -125,8 +155,8 @@ output "next_steps" {
        - Edit 'main.tf': Set 'enable_https = true'.
        - Run: 'terraform apply'
     
-    🔐 SSH Access (Use 'EC2-Sandbox-TH' key):
-    - Frontend: ssh -i path/to/EC2-Sandbox-TH.pem ec2-user@${module.frontend.public_ip}
-    - Backend Base: ssh -i path/to/EC2-Sandbox-TH.pem ec2-user@${module.backend.base_instance_public_ip}
+    🔐 SSH Access:
+    - Frontend: ssh -i path/to/key.pem ec2-user@${module.frontend.public_ip}
+    - Backend Base: ssh -i path/to/key.pem ec2-user@${module.backend.base_instance_public_ip}
   EOT
 }

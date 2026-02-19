@@ -102,6 +102,25 @@ resource "aws_s3_bucket_policy" "main" {
   })
 }
 
+# ============================================================================
+# Upload Oracle Wallet file (cwallet.sso)
+# ============================================================================
+resource "aws_s3_object" "cwallet" {
+  count  = var.upload_wallet_file ? 1 : 0
+  bucket = aws_s3_bucket.main.id
+  key    = "wallet/cwallet.sso"
+  source = "${path.module}/cwallet.sso"
+  etag   = filemd5("${path.module}/cwallet.sso")
+
+  tags = merge(
+    var.tags,
+    {
+      Name    = "Oracle Wallet"
+      Purpose = "Database connectivity wallet"
+    }
+  )
+}
+
 # VPC Endpoint for S3 (optional - for private access without NAT Gateway)
 resource "aws_vpc_endpoint" "s3" {
   count        = var.create_vpc_endpoint && var.vpc_id != "" ? 1 : 0

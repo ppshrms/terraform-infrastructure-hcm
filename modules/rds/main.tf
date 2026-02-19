@@ -2,6 +2,8 @@
 
 # DB Subnet Group
 resource "aws_db_subnet_group" "main" {
+  count = var.create_rds ? 1 : 0
+
   name       = "${var.customer_name}-${var.environment}-db-subnet-group"
   subnet_ids = var.subnet_ids
 
@@ -15,6 +17,8 @@ resource "aws_db_subnet_group" "main" {
 
 # DB Parameter Group
 resource "aws_db_parameter_group" "main" {
+  count = var.create_rds ? 1 : 0
+
   name   = "${var.customer_name}-${var.environment}-oracle-params"
   family = "oracle-se2-19"
 
@@ -28,6 +32,8 @@ resource "aws_db_parameter_group" "main" {
 
 # RDS Oracle Instance
 resource "aws_db_instance" "main" {
+  count = var.create_rds ? 1 : 0
+
   identifier = "${var.customer_name}-${var.environment}-oracle-db"
 
   # Engine
@@ -52,7 +58,7 @@ resource "aws_db_instance" "main" {
   port     = 1521
 
   # Network
-  db_subnet_group_name   = aws_db_subnet_group.main.name
+  db_subnet_group_name   = aws_db_subnet_group.main[0].name
   vpc_security_group_ids = [var.security_group_id]
   publicly_accessible    = var.publicly_accessible
 
@@ -70,7 +76,7 @@ resource "aws_db_instance" "main" {
   monitoring_role_arn             = var.monitoring_role_arn
 
   # Parameter Group
-  parameter_group_name = aws_db_parameter_group.main.name
+  parameter_group_name = aws_db_parameter_group.main[0].name
 
   # Deletion Protection
   deletion_protection       = var.deletion_protection
@@ -92,3 +98,4 @@ resource "aws_db_instance" "main" {
     ignore_changes = [final_snapshot_identifier]
   }
 }
+
