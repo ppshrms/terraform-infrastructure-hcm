@@ -89,11 +89,10 @@ module "iam" {
 module "networking" {
   source = "../../../modules/networking"
 
-  customer_name      = var.customer_name
-  environment        = var.environment
-  vpc_cidr           = var.vpc_cidr
-  create_nat_gateway = var.create_nat_gateway
-  tags               = local.common_tags
+  customer_name = var.customer_name
+  environment   = var.environment
+  vpc_cidr      = var.vpc_cidr
+  tags          = local.common_tags
 }
 
 # ============================================================================

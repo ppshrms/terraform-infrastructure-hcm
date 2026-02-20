@@ -33,12 +33,6 @@ variable "vpc_cidr" {
   default     = "172.16.0.0/16"
 }
 
-variable "create_nat_gateway" {
-  description = "Whether to create NAT gateway"
-  type        = bool
-  default     = true
-}
-
 # Domain & DNS
 variable "domain_name" {
   description = "Base domain name"

@@ -25,11 +25,10 @@ module "iam" {
 module "networking" {
   source = "../../../modules/networking"
 
-  customer_name      = var.customer_name
-  environment        = var.environment
-  vpc_cidr           = var.vpc_cidr
-  create_nat_gateway = false # ปิดไปถ้าไม่ต้องการ
-  tags               = { Environment = var.environment }
+  customer_name = var.customer_name
+  environment   = var.environment
+  vpc_cidr      = var.vpc_cidr
+  tags          = { Environment = var.environment }
 }
 
 # Module 3: Security Groups (เลือกใช้แค่ที่ต้องการ)

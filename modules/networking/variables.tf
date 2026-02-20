@@ -14,12 +14,6 @@ variable "vpc_cidr" {
   default     = "172.16.0.0/16"
 }
 
-variable "create_nat_gateway" {
-  description = "Whether to create NAT gateway for private subnets"
-  type        = bool
-  default     = true
-}
-
 variable "tags" {
   description = "Common tags to apply to all resources"
   type        = map(string)

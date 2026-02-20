@@ -1,7 +1,7 @@
 # ============================================================================
 # AWS Configuration
 # ============================================================================
-aws_region          = "ap-southeast-7"
+aws_region          = "ap-southeast-1"
 expected_account_id = "065209282787" # Add your AWS account ID for safety
 
 # ============================================================================
@@ -14,23 +14,22 @@ site_name     = "HCM11.1 Demo Production"
 # ============================================================================
 # Network Configuration
 # ============================================================================
-vpc_cidr           = "172.19.0.0/16"
-create_nat_gateway = true
+vpc_cidr = "172.19.0.0/16"
 
 # ============================================================================
 # Domain & DNS
 # ============================================================================
-domain_name        = "demo-hcm11.1.peopleplushcm.com"
+domain_name        = "demo-sanbox.peopleplushcm.com"
 create_hosted_zone = true
 frontend_domain    = "" # Empty for naked domain (https://demo-hcm11.1.peopleplushcm.com)
-backend_domain     = "api.demo-hcm11.1.peopleplushcm.com"
+backend_domain     = "api.demo-sanbox.peopleplushcm.com"
 
 # ============================================================================
 # Frontend EC2
 # ============================================================================
 frontend_instance_type    = "t3.large"
 frontend_ami              = "" # Latest Amazon Linux 2
-frontend_key_name         = "EC2-Sandbox-TH"
+frontend_key_name         = "EC2-Sandbox-SP"
 frontend_root_volume_size = 100
 
 # ============================================================================
@@ -39,7 +38,7 @@ frontend_root_volume_size = 100
 create_backend_base      = true # Create base instance first
 backend_instance_type    = "t3.large"
 backend_ami              = "" # Latest Amazon Linux 2
-backend_key_name         = "EC2-Sandbox-TH"
+backend_key_name         = "EC2-Sandbox-SP"
 backend_min_size         = 0 # Min ASG size
 backend_max_size         = 4 # Max ASG size
 backend_desired_size     = 1 # Desired ASG size
@@ -48,7 +47,7 @@ backend_root_volume_size = 100
 # ============================================================================
 # RDS Oracle Database
 # ============================================================================
-create_rds                = true # ← เปลี่ยนเป็น false ถ้าไม่ต้องการ RDS
+create_rds                = false # ← เปลี่ยนเป็น false ถ้าไม่ต้องการ RDS
 rds_instance_class        = "db.m7i.large"
 rds_engine_version        = "19.0.0.0.ru-2023-10.rur-2023-10.r1"
 rds_allocated_storage     = 200
