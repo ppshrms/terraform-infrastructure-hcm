@@ -76,6 +76,12 @@ variable "multi_az" {
   default     = true
 }
 
+variable "availability_zone" {
+  description = "Preferred availability zone for RDS (leave empty for AWS default)"
+  type        = string
+  default     = ""
+}
+
 variable "backup_retention_period" {
   description = "Backup retention period in days"
   type        = number

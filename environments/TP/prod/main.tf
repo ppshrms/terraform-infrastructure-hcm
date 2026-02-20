@@ -216,6 +216,7 @@ module "rds" {
   monitoring_role_arn     = module.iam.rds_monitoring_role_arn
   deletion_protection     = var.rds_deletion_protection
   skip_final_snapshot     = var.rds_skip_final_snapshot
+  availability_zone       = var.rds_availability_zone
 
   tags = local.common_tags
 }
@@ -236,4 +237,18 @@ module "scaling" {
   tags                       = local.common_tags
 
   depends_on = [module.backend]
+}
+
+# ============================================================================
+# SES Email (Optional - สำหรับส่ง email จาก application)
+# ============================================================================
+module "ses" {
+  count  = var.create_ses ? 1 : 0
+  source = "../../modules/ses"
+
+  customer_name  = var.customer_name
+  environment    = var.environment
+  email_identity = var.ses_email_identity
+  aws_region     = var.aws_region
+  tags           = local.common_tags
 }

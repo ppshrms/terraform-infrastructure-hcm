@@ -160,3 +160,27 @@ output "next_steps" {
     - Backend Base: ssh -i path/to/key.pem ec2-user@${module.backend.base_instance_public_ip}
   EOT
 }
+
+# ============================================================================
+# SES Email Outputs (when create_ses = true)
+# ============================================================================
+output "ses_smtp_username" {
+  description = "SES SMTP Username"
+  value       = var.create_ses ? module.ses[0].smtp_username : null
+}
+
+output "ses_smtp_password" {
+  description = "SES SMTP Password (sensitive)"
+  value       = var.create_ses ? module.ses[0].smtp_password : null
+  sensitive   = true
+}
+
+output "ses_smtp_endpoint" {
+  description = "SES SMTP Endpoint"
+  value       = var.create_ses ? module.ses[0].smtp_endpoint : null
+}
+
+output "ses_smtp_port" {
+  description = "SES SMTP Port"
+  value       = var.create_ses ? module.ses[0].smtp_port : null
+}

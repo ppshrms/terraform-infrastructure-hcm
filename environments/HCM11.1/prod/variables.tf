@@ -254,3 +254,24 @@ variable "rds_skip_final_snapshot" {
   type        = bool
   default     = false
 }
+
+variable "rds_availability_zone" {
+  description = "Preferred AZ for RDS instance (e.g., 'ap-southeast-1a'). Leave empty for AWS default."
+  type        = string
+  default     = ""
+}
+
+# ============================================================================
+# SES Email Configuration (Optional)
+# ============================================================================
+variable "create_ses" {
+  description = "Whether to create SES SMTP user for sending emails"
+  type        = bool
+  default     = false
+}
+
+variable "ses_email_identity" {
+  description = "Email address or domain for SES (e.g., 'noreply@example.com' or 'example.com')"
+  type        = string
+  default     = ""
+}

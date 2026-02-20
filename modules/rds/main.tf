@@ -63,7 +63,8 @@ resource "aws_db_instance" "main" {
   publicly_accessible    = var.publicly_accessible
 
   # High Availability
-  multi_az = var.multi_az
+  multi_az          = var.multi_az
+  availability_zone = var.multi_az ? null : (var.availability_zone != "" ? var.availability_zone : null)
 
   # Backup
   backup_retention_period = var.backup_retention_period

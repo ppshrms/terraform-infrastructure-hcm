@@ -63,6 +63,7 @@ rds_backup_window           = "03:00-04:00"         # UTC
 rds_maintenance_window      = "sun:04:00-sun:05:00" # UTC
 rds_deletion_protection     = true
 rds_skip_final_snapshot     = false
+rds_availability_zone       = "" # ← เช่น "ap-southeast-1a" (ว่าง = AWS เลือกให้)
 
 # ============================================================================
 # Load Balancer
@@ -76,3 +77,9 @@ cpu_scale_out_threshold    = 70  # CPU % to scale out
 memory_scale_out_threshold = 80  # Memory % to scale out
 scale_evaluation_periods   = 2   # 2 periods of 5 min = 10 min
 scale_cooldown             = 300 # 5 minutes between scaling
+
+# ============================================================================
+# SES Email (Optional - สำหรับส่ง email)
+# ============================================================================
+create_ses         = true                        # ← true = สร้าง SMTP user
+ses_email_identity = "noreply@peopleplushcm.com" # ← email หรือ domain
